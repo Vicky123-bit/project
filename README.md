@@ -1,90 +1,71 @@
-# project
-# Machine Learning Enhanced Phishing Email Detection
+# Machine Learning Phishing Email Detection
 
-## Project Overview
+Detecting phishing emails from their text with two supervised models, Multinomial Naïve Bayes and
+Random Forest, trained on TF-IDF features. MSc Cyber Security project, University of Hertfordshire (2025).
 
-This project explores the use of machine learning to identify phishing emails and distinguish them from legitimate emails.
-
-The project compares two supervised machine-learning algorithms:
-
-- Multinomial Naïve Bayes
-- Random Forest Classifier
-
-Email text is processed using Natural Language Processing (NLP) techniques and TF-IDF vectorisation. Both models are trained and evaluated to compare their phishing detection performance.
-
-## Objectives
-
-- Understand common phishing email threats and techniques.
-- Develop machine-learning models to classify phishing and legitimate emails.
-- Compare Naïve Bayes and Random Forest performance.
-- Evaluate models using accuracy, precision, recall and confusion matrices.
-- Explore improvements for future phishing detection systems.
-
-## Technologies Used
-
-- Python
-- Pandas
-- Scikit-learn
-- Matplotlib
-- Seaborn
-- TF-IDF Vectorisation
-- Natural Language Processing (NLP)
+**Result:** Random Forest catches 99.4% of phishing emails with 99.2% precision. Compared with
+Naïve Bayes it misses 5× fewer phishing emails (25 vs 125), at the cost of more false alarms (36 vs 19).
 
 ## Dataset
 
-The project uses a publicly available phishing email dataset from Kaggle, containing 11,229 email samples.
+**CEAS 2008** (`CEAS_08.csv`, from Kaggle): 39,154 emails, 21,842 phishing (`label = 1`) and
+17,312 legitimate (`label = 0`). The models use the email `body` text only.
 
-The dataset includes:
-- Email body text
-- Classification labels:
-  - `1` – Phishing email
-  - `0` – Legitimate email
+The dataset is not included in this repo. Download `CEAS_08.csv` from Kaggle, check its licence,
+and put it at `data/CEAS_08.csv`.
 
-The dataset is divided into 80% training data and 20% testing data.
+## Method
 
-Please refer to the original dataset source and its licence before redistributing any dataset files.
-
-## Methodology
-
-1. Load the phishing email dataset.
-2. Handle missing values and prepare email text.
-3. Convert email text into numerical features using TF-IDF.
-4. Split the dataset into training and testing sets.
-5. Train a Multinomial Naïve Bayes classifier.
-6. Train a Random Forest classifier using 100 estimators.
-7. Generate predictions and evaluate both models.
-8. Compare the results using classification metrics and confusion matrices.
+1. Load the emails and drop rows with missing text or label.
+2. Split 80:20 into training and test sets (`random_state=42`, so both models see the same 7,831 test emails).
+3. Convert text to TF-IDF features (5,000 features, English stop words removed; the Random Forest also uses bigrams).
+4. Train Multinomial Naïve Bayes and a Random Forest (100 trees).
+5. Compare them with precision, recall, accuracy and confusion matrices.
 
 ## Results
 
-The results reported in the academic project were:
+On the 7,831 test emails (4,341 phishing, 3,490 legitimate):
 
-| Metric | Naïve Bayes | Random Forest |
+| Metric (phishing class) | Naïve Bayes | Random Forest |
 |---|---:|---:|
-| Accuracy | 98% | 99% |
-| Precision | 97% | 99% |
-| Recall | 97% | 99% |
-| False Positives | 47 | 21 |
-| False Negatives | 39 | 18 |
+| Precision | 99.6% | 99.2% |
+| Recall | 97.1% | 99.4% |
+| Accuracy (overall) | 98.2% | 99.2% |
+| Phishing missed (false negatives) | 125 | 25 |
+| Legitimate flagged (false positives) | 19 | 36 |
 
-Random Forest performed better across the reported metrics, while Naïve Bayes offered a simpler and faster classification approach.
+**What this means:** Random Forest is the better phishing filter. A missed phishing email can lead to
+a compromise, so cutting misses from 125 to 25 matters more than the 17 extra legitimate emails it
+flags for review. Naïve Bayes is more conservative: when it says "phishing" it is almost always
+right, but it lets more phishing through.
 
-These are the results reported in the original project and should be reproducible against the same dataset and implementation before being treated as independently verified.
+| Naïve Bayes | Random Forest |
+|---|---|
+| ![Naïve Bayes confusion matrix](results/confusion_matrix_naive_bayes.png) | ![Random Forest confusion matrix](results/confusion_matrix_random_forest.png) |
 
-## Limitations and Future Improvements
+## Limitations: what the model actually learned
 
-Potential improvements include:
+![Top 20 Random Forest features](results/top_features_random_forest.png)
 
-- Analysing email headers and sender information.
-- Detecting suspicious URLs and spoofed domains.
-- Exploring BERT and LSTM-based models.
-- Developing a hybrid detection approach.
-- Exploring integration with enterprise email security systems and SIEM platforms.
+The most important features are mailing-list words: "wrote", "mailman listinfo", "mailing list",
+"linux", "2007". Most legitimate emails in CEAS 2008 come from public mailing lists, so part of
+what the model learns is "is this a mailing-list email?" rather than "is this phishing?". Accuracy on
+a real organisation's inbox would likely be lower.
 
-## Academic Project
+Ways to improve:
 
-MSc Cyber Security  
-University of Hertfordshire  
-2025
+- Test on a second, more recent dataset to check the model generalises.
+- Add header and sender features (SPF/DKIM results, display-name spoofing, reply-to mismatch).
+- Analyse URLs: domain age, lookalike domains, URL shorteners.
+- Try transformer models (e.g. BERT) on the same split.
+- Feed predictions into a SIEM as an enrichment signal rather than a standalone verdict.
 
-This repository presents an academic cybersecurity project on machine-learning-based phishing email detection.
+## Run it
+
+```bash
+pip install -r requirements.txt
+python naive_bayes.py          # reads data/CEAS_08.csv, writes results/confusion_matrix_naive_bayes.png
+python random_forest.py        # writes the Random Forest confusion matrix and top-features chart
+```
+
+Pass a different path as the first argument if your CSV is elsewhere.

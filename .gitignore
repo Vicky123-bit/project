@@ -1,0 +1,4 @@
+# Dataset is not redistributed: download it yourself (see README)
+data/
+.DS_Store
+__pycache__/
